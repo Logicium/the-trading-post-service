@@ -18,17 +18,28 @@ export class MessageService {
       throw new NotFoundException('User or Post not found');
     }
 
-    // Check if conversation already exists
-    const existing = await this.em.findOne(Conversation, {
-      post: postId,
-      $or: [
-        { participant1: userId, participant2: post.user.id },
-        { participant1: post.user.id, participant2: userId },
-      ],
-    });
+    // Only create new conversation if user is not the post author
+    if (post.user.id === userId) {
+      throw new ForbiddenException('You cannot create a conversation with your own post');
+    }
+
+    // Check if conversation already exists between these two users for this post
+    const existing = await this.em.findOne(
+      Conversation,
+      {
+        post: postId,
+        $or: [
+          { participant1: userId, participant2: post.user.id },
+          { participant1: post.user.id, participant2: userId },
+        ],
+      },
+      {
+        populate: ['participant1', 'participant2', 'post', 'post.user'],
+      },
+    );
 
     if (existing) {
-      return this.serializeConversation(existing);
+      return this.serializeConversation(existing, userId);
     }
 
     const conversation = new Conversation();
@@ -47,7 +58,7 @@ export class MessageService {
 
     await this.em.persistAndFlush(activity);
 
-    return this.serializeConversation(conversation);
+    return this.serializeConversation(conversation, userId);
   }
 
   async getConversations(userId: string) {
