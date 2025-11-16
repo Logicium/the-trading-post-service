@@ -104,10 +104,21 @@ export class TransactionService {
       throw new ForbiddenException('You are not part of this transaction');
     }
 
+    // Check if already completed
+    if (transaction.status === TransactionStatus.COMPLETED) {
+      throw new BadRequestException('Transaction already completed');
+    }
+
     // Mark confirmation based on who confirmed
     if (transaction.provider.id === userId) {
+      if (transaction.providerConfirmed) {
+        throw new BadRequestException('You have already confirmed this transaction');
+      }
       transaction.providerConfirmed = true;
     } else {
+      if (transaction.receiverConfirmed) {
+        throw new BadRequestException('You have already confirmed this transaction');
+      }
       transaction.receiverConfirmed = true;
     }
 
@@ -125,9 +136,9 @@ export class TransactionService {
       transaction.receiver.completedTrades += 1;
     } else {
       // Update status to show who's pending
-      if (transaction.providerConfirmed) {
+      if (transaction.providerConfirmed && !transaction.receiverConfirmed) {
         transaction.status = TransactionStatus.PENDING_RECEIVER;
-      } else {
+      } else if (!transaction.providerConfirmed && transaction.receiverConfirmed) {
         transaction.status = TransactionStatus.PENDING_PROVIDER;
       }
     }
