@@ -37,6 +37,14 @@ export class TransactionController {
     return this.transactionService.getUserTransactions(req.user.sub);
   }
 
+  @Get('post/:postId')
+  async getOrCreateTransactionForPost(
+    @Param('postId') postId: string,
+    @Request() req: any,
+  ) {
+    return this.transactionService.getOrCreateTransactionForPost(req.user.sub, postId);
+  }
+
   @Get(':id')
   async getTransactionById(@Param('id') id: string, @Request() req: any) {
     return this.transactionService.getTransactionById(id, req.user.sub);

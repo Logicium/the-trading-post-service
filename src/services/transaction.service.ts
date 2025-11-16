@@ -50,6 +50,42 @@ export class TransactionService {
     return transactions.map(t => this.serializeTransaction(t));
   }
 
+  async getOrCreateTransactionForPost(userId: string, postId: string) {
+    const post = await this.em.findOne(Post, { id: postId }, { populate: ['user'] });
+    
+    if (!post) {
+      throw new NotFoundException('Post not found');
+    }
+
+    // Check if transaction already exists for this post
+    const existing = await this.em.findOne(
+      Transaction,
+      { post: postId },
+      { populate: ['post', 'provider', 'receiver'] },
+    );
+
+    if (existing) {
+      return this.serializeTransaction(existing);
+    }
+
+    // Determine provider and receiver based on post type
+    let providerId: string;
+    let receiverId: string;
+
+    if (post.type === 'offer') {
+      // Post author is offering a service, so they are the provider
+      providerId = post.user.id;
+      receiverId = userId; // The person who connected
+    } else {
+      // Post author is requesting help, so the person who connected is the provider
+      providerId = userId;
+      receiverId = post.user.id;
+    }
+
+    // Create new transaction
+    return this.createTransaction(userId, postId, providerId, receiverId, post.hours);
+  }
+
   async confirmTransaction(transactionId: string, userId: string) {
     const transaction = await this.em.findOne(
       Transaction,
