@@ -128,7 +128,7 @@ export class MessageService {
     const conversation = await this.em.findOne(
       Conversation,
       { id: conversationId },
-      { populate: ['participant1', 'participant2'] },
+      { populate: ['participant1', 'participant2', 'post', 'post.user'] },
     );
 
     if (!conversation) {
@@ -162,8 +162,7 @@ export class MessageService {
       conversation.unreadCountUser1 += 1;
     }
 
-    await this.em.persistAndFlush(message);
-    await this.em.flush();
+    await this.em.persistAndFlush([message, conversation]);
 
     return this.serializeMessage(message);
   }
