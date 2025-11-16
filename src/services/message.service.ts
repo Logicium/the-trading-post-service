@@ -18,11 +18,6 @@ export class MessageService {
       throw new NotFoundException('User or Post not found');
     }
 
-    // Only create new conversation if user is not the post author
-    if (post.user.id === userId) {
-      throw new ForbiddenException('You cannot create a conversation with your own post');
-    }
-
     // Check if conversation already exists between these two users for this post
     const existing = await this.em.findOne(
       Conversation,
@@ -40,6 +35,11 @@ export class MessageService {
 
     if (existing) {
       return this.serializeConversation(existing, userId);
+    }
+
+    // Only prevent creating NEW conversation if user is the post author
+    if (post.user.id === userId) {
+      throw new ForbiddenException('You cannot create a conversation with your own post');
     }
 
     const conversation = new Conversation();
